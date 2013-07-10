@@ -24,6 +24,10 @@ References:
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var rest = require('restler');
+//var util = require('util');
+
+
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
 
@@ -65,22 +69,30 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-.option('-u,  --url <url>', 'Url to html file')
+        .option('-u, --url <URL>', 'URL to process')
         .parse(process.argv);
-if(program.url){                
-var fs = require('fs');
-var rest = require('restler');
-        var url = program.url.toString();              
-        rest.get(url).on('complete', function(result, response){   
-var urlFile = "hello.txt";
-fs.writeFileSync(urlFile,result);
- var checkJson = checkHtmlFile(urlFile, program.checks);
-});}
-else{
-    var checkJson = checkHtmlFile(program.file, program.checks);
-}
+   
+    if (program.file){ 
+       var checkJson = checkHtmlFile(program.file, program.checks);
+    }
+
+    if (program.url){
+       var index_url =  HTMLFILE_DEFAULT;
+       rest.get(program.url).on('complete', function(result) {
+         if (result instanceof Error) {
+           sys.puts('Error: ' + result.message);
+           this.retry(5000); // try again after 5 sec
+         } else {
+           fs.writeFileSync(index_url, result);
+         }
+       });
+       
+       var checkJson = checkHtmlFile(index_url, program.checks);
+    }
+
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
+ 
 } else {
     exports.checkHtmlFile = checkHtmlFile;
 }
